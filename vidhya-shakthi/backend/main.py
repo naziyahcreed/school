@@ -46,5 +46,5 @@ def detailed_health():
         "database": "configured",
         "ai_engine": "ready",
         "messaging": "whatsapp+sms",
-        "vector_db": settings.QDRANT_COLLECTION,
+        "vector_db": "pgvector",
     }

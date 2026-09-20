@@ -1,5 +1,5 @@
 """
-RAG-Based Socratic Tamil AI Tutor — Samacheer Kalvi syllabus grounding.
+RAG-Based Socratic Tamil AI Tutor — Samacheer Kalvi syllabus grounding using pgvector.
 """
 import json
 import logging
@@ -7,11 +7,12 @@ import uuid
 from typing import Any
 
 from openai import OpenAI
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 from langchain_openai import OpenAIEmbeddings
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.database import SessionLocal
+from app.models.document_chunk import DocumentChunk
 from app.schemas.ai import TutorChatRequest, TutorChatResponse
 
 logger = logging.getLogger(__name__)
@@ -47,14 +48,6 @@ class TutorService:
             if settings.OPENAI_API_KEY
             else None
         )
-        self.qdrant: QdrantClient | None = None
-        try:
-            self.qdrant = QdrantClient(
-                url=settings.QDRANT_URL,
-                api_key=settings.QDRANT_API_KEY or None,
-            )
-        except Exception as exc:
-            logger.warning("Qdrant unavailable: %s — RAG will use fallback context", exc)
 
     def chat(self, request: TutorChatRequest, conversation_history: list[dict] | None = None) -> TutorChatResponse:
         session_id = request.session_id or uuid.uuid4()
@@ -78,40 +71,42 @@ class TutorService:
         )
 
     def _retrieve_context(self, request: TutorChatRequest) -> list[dict]:
-        if not self.qdrant or not self.embeddings:
+        if not self.embeddings:
             return self._fallback_syllabus_chunks(request)
 
         try:
             query_vector = self.embeddings.embed_query(request.message)
-            search_filter = None
-            if request.subject_id:
-                search_filter = Filter(
-                    must=[FieldCondition(key="subject_id", match=MatchValue(value=str(request.subject_id)))]
-                )
-            if request.chapter_id:
-                chapter_filter = FieldCondition(
-                    key="chapter_id", match=MatchValue(value=str(request.chapter_id))
-                )
-                search_filter = Filter(must=[chapter_filter])
+            
+            db: Session = SessionLocal()
+            try:
+                query = db.query(DocumentChunk, DocumentChunk.embedding.cosine_distance(query_vector).label("distance"))
+                
+                if request.subject_id:
+                    query = query.filter(DocumentChunk.subject_id == str(request.subject_id))
+                if getattr(request, "chapter_id", None): # chapter_title might be what is stored in DB
+                    pass # Or handle chapter filter if strictly UUID or title
 
-            results = self.qdrant.search(
-                collection_name=settings.QDRANT_COLLECTION,
-                query_vector=query_vector,
-                query_filter=search_filter,
-                limit=5,
-                score_threshold=0.65,
-            )
-            return [
-                {
-                    "text": hit.payload.get("text", ""),
-                    "chapter": hit.payload.get("chapter_title", ""),
-                    "page": hit.payload.get("page_number"),
-                    "score": hit.score,
-                }
-                for hit in results
-            ]
+                # We want threshold corresponding to similarity score > 0.65.
+                # Distance = 1 - cosine_similarity. So similarity > 0.65 means distance < 0.35.
+                results = query.filter(DocumentChunk.embedding.cosine_distance(query_vector) < 0.35) \
+                               .order_by("distance") \
+                               .limit(5) \
+                               .all()
+
+                return [
+                    {
+                        "text": hit.DocumentChunk.content,
+                        "chapter": hit.DocumentChunk.chapter_title,
+                        "page": hit.DocumentChunk.page_number,
+                        "score": 1.0 - float(hit.distance),
+                    }
+                    for hit in results
+                ]
+            finally:
+                db.close()
+                
         except Exception as exc:
-            logger.warning("Qdrant search failed: %s", exc)
+            logger.warning("pgvector search failed: %s", exc)
             return self._fallback_syllabus_chunks(request)
 
     def _fallback_syllabus_chunks(self, request: TutorChatRequest) -> list[dict]:

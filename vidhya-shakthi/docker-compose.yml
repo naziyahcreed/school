@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: vidhya_postgres
     environment:
       POSTGRES_USER: vidhya
@@ -27,14 +27,7 @@ services:
     volumes:
       - redis_data:/data
 
-  qdrant:
-    image: qdrant/qdrant:v1.12.1
-    container_name: vidhya_qdrant
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    volumes:
-      - qdrant_data:/qdrant/storage
+
 
   backend:
     build:
@@ -46,15 +39,12 @@ services:
     environment:
       DATABASE_URL: postgresql://vidhya:vidhya@postgres:5432/vidhya_shakthi
       REDIS_URL: redis://redis:6379/0
-      QDRANT_URL: http://qdrant:6333
     env_file:
       - ./backend/.env
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
-      qdrant:
         condition: service_started
     volumes:
       - ./backend:/app
@@ -77,4 +67,3 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  qdrant_data:

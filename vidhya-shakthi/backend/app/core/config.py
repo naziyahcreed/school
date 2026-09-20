@@ -17,9 +17,7 @@ class Settings(BaseSettings):
     LLM_MODEL: str = "gpt-4o-mini"
     EMBEDDING_MODEL: str = "text-embedding-3-small"
 
-    QDRANT_URL: str = "http://localhost:6333"
-    QDRANT_COLLECTION: str = "samacheer_kalvi_books"
-    QDRANT_API_KEY: str = ""
+
 
     WHATSAPP_API_URL: str = "https://graph.facebook.com/v21.0"
     WHATSAPP_PHONE_NUMBER_ID: str = ""

@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 """
-Index Samacheer Kalvi PDF textbooks into Qdrant vector database for RAG tutor.
+Index Samacheer Kalvi PDF textbooks into PostgreSQL (pgvector) vector database for RAG tutor.
 Usage: python scripts/index_syllabus.py --pdf-dir ./data/samacheer_pdfs
 """
 import argparse
-import hashlib
-import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 
 from pypdf import PdfReader
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import Distance, VectorParams, PointStruct
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
+
 from app.core.config import get_settings
+from app.core.database import SessionLocal
+from app.models.document_chunk import DocumentChunk
 
 settings = get_settings()
 CHUNK_SIZE = 800
@@ -48,25 +47,13 @@ def extract_pdf_chunks(pdf_path: Path, subject_id: str, chapter_title: str) -> l
     ]
 
 
-def ensure_collection(client: QdrantClient, vector_size: int = 1536):
-    collections = [c.name for c in client.get_collections().collections]
-    if settings.QDRANT_COLLECTION not in collections:
-        client.create_collection(
-            collection_name=settings.QDRANT_COLLECTION,
-            vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
-        )
-        print(f"Created collection: {settings.QDRANT_COLLECTION}")
-
-
 def index_pdfs(pdf_dir: Path):
     if not settings.OPENAI_API_KEY:
         print("ERROR: OPENAI_API_KEY required for embeddings")
         sys.exit(1)
 
     embeddings = OpenAIEmbeddings(model=settings.EMBEDDING_MODEL, api_key=settings.OPENAI_API_KEY)
-    client = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY or None)
-    ensure_collection(client)
-
+    
     pdf_files = list(pdf_dir.glob("**/*.pdf"))
     if not pdf_files:
         print(f"No PDF files found in {pdf_dir}")
@@ -81,32 +68,49 @@ def index_pdfs(pdf_dir: Path):
         all_chunks.extend(chunks)
         print(f"  Extracted {len(chunks)} chunks from {pdf.name}")
 
+    if not all_chunks:
+        print("No chunks extracted.")
+        return
+
     print(f"Embedding {len(all_chunks)} chunks...")
     texts = [c["text"] for c in all_chunks]
     vectors = embeddings.embed_documents(texts)
 
-    points = []
-    for i, (chunk, vector) in enumerate(zip(all_chunks, vectors)):
-        point_id = int(hashlib.md5(f"{chunk['source_file']}_{i}".encode()).hexdigest()[:8], 16)
-        points.append(
-            PointStruct(
-                id=point_id,
-                vector=vector,
-                payload=chunk,
-            )
-        )
-
-    batch_size = 100
-    for start in range(0, len(points), batch_size):
-        batch = points[start : start + batch_size]
-        client.upsert(collection_name=settings.QDRANT_COLLECTION, points=batch)
-        print(f"  Indexed {min(start + batch_size, len(points))}/{len(points)}")
-
-    print(f"Done. Indexed {len(points)} vectors into '{settings.QDRANT_COLLECTION}'")
+    db = SessionLocal()
+    try:
+        # Clear existing data if necessary, or just append
+        print("Inserting into pgvector (document_chunks table)...")
+        batch_size = 100
+        for i in range(0, len(all_chunks), batch_size):
+            chunk_batch = all_chunks[i:i+batch_size]
+            vector_batch = vectors[i:i+batch_size]
+            
+            db_objects = []
+            for chunk, vector in zip(chunk_batch, vector_batch):
+                db_obj = DocumentChunk(
+                    subject_id=chunk["subject_id"],
+                    chapter_title=chunk["chapter_title"],
+                    page_number=chunk["page_number"],
+                    source_file=chunk["source_file"],
+                    content=chunk["text"],
+                    embedding=vector
+                )
+                db_objects.append(db_obj)
+            
+            db.bulk_save_objects(db_objects)
+            db.commit()
+            print(f"  Indexed {min(i + batch_size, len(all_chunks))}/{len(all_chunks)}")
+            
+        print(f"Done. Indexed {len(all_chunks)} vectors into pgvector database.")
+    except Exception as e:
+        print(f"Error inserting into db: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Index Samacheer Kalvi PDFs into Qdrant")
+    parser = argparse.ArgumentParser(description="Index Samacheer Kalvi PDFs into PostgreSQL vector DB")
     parser.add_argument("--pdf-dir", type=Path, default=Path("./data/samacheer_pdfs"))
     args = parser.parse_args()
     index_pdfs(args.pdf_dir)

@@ -5,6 +5,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- ---------------------------------------------------------------------------
 -- ENUM Types
@@ -63,9 +64,24 @@ CREATE TABLE syllabus_chapters (
     title_ta        VARCHAR(255),
     term            SMALLINT CHECK (term IN (1, 2, 3)),
     pdf_url         TEXT,
-    vector_index_id VARCHAR(100),
     UNIQUE (subject_id, chapter_number)
 );
+
+-- ---------------------------------------------------------------------------
+-- 1.5 VECTOR SEARCH (RAG)
+-- ---------------------------------------------------------------------------
+CREATE TABLE document_chunks (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    subject_id      VARCHAR(100),
+    chapter_title   VARCHAR(255),
+    page_number     SMALLINT,
+    source_file     VARCHAR(255),
+    content         TEXT NOT NULL,
+    embedding       VECTOR(1536),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX ON document_chunks USING hnsw (embedding vector_cosine_ops);
 
 -- ---------------------------------------------------------------------------
 -- 2. USERS & STUDENT PROFILES
