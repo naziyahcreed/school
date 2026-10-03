@@ -11,7 +11,9 @@ import RequireAuth from './components/RequireAuth';
 import GuideHome from './pages/guides/GuideHome';
 import MathsUnits from './pages/guides/maths/MathsUnits';
 import Unit1Exercises from './pages/guides/maths/unit-1/Unit1Exercises';
+import Unit1ExercisesNew from './pages/guides/maths/unit-1/Unit1ExercisesNew';
 import Exercise1_1 from './pages/guides/maths/unit-1/Exercise1_1';
+import Exercise1_1New from './pages/guides/maths/unit-1/Exercise1_1New';
 import { AuthProvider } from './context/AuthContext';
 import { getHomePathForRole, readStoredAuth } from './lib/auth';
 
@@ -159,6 +161,8 @@ function App() {
             <Route path="/guides" element={<GuideHome />} />
             <Route path="/guides/maths" element={<MathsUnits />} />
             <Route path="/guides/maths/unit-1" element={<Unit1Exercises />} />
+            <Route path="/guides/maths/unit-1-new" element={<Unit1ExercisesNew />} />
+            <Route path="/guides/maths/unit-1-perfect" element={<Exercise1_1New />} />
             <Route path="/guides/maths/unit-1/exercise-1-1" element={<Exercise1_1 />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
