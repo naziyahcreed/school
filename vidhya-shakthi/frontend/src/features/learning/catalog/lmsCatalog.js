@@ -1,12 +1,11 @@
 /**
- * Learn Hub catalog backed by site-learning-lms-latex Q&A (all units).
- * Source files are not modified.
+ * Learn Hub catalog backed by internal Q&A (all units).
  */
-import { TAMIL_SUBJECT_UNITS } from '@lms/data/tamilSubject/index.ts';
-import { ENGLISH_SUBJECT_UNITS } from '@lms/data/englishSubject/index.ts';
-import { SCIENCE_SUBJECT_UNITS } from '@lms/data/scienceSubject/index.ts';
-import { TAMIL_MEDIUM_UNITS } from '@lms/data/tamilMedium/index.ts';
-import socialGuide from '@lms-root/data/json_guides/10th_Social_Science_Sura_Guide.json';
+import { TAMIL_SUBJECT_UNITS } from '../../../lms-internal/data/tamilSubject/index.ts';
+import { ENGLISH_SUBJECT_UNITS } from '../../../lms-internal/data/englishSubject/index.ts';
+import { SCIENCE_SUBJECT_UNITS } from '../../../lms-internal/data/scienceSubject/index.ts';
+import { TAMIL_MEDIUM_UNITS } from '../../../lms-internal/data/tamilMedium/index.ts';
+import socialGuide from '../../../lms-internal/json_guides/10th_Social_Science_Sura_Guide.json';
 import { problemToQuestion, socialToQuestion } from '../utils/unitQuestions.js';
 
 function fromBookChapters(units) {

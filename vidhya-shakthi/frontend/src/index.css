@@ -11,6 +11,11 @@
   font-size: 1.05em;
 }
 
+/* Fix KaTeX Tamil character rendering: force Noto Sans Tamil fallback */
+.katex, .katex-html, .katex .text, .katex .mord, .katex .brahmic_fallback, .katex .mathbf {
+  font-family: KaTeX_Main, 'Noto Sans Tamil', 'Noto Serif Tamil', 'Mukta Malar', sans-serif !important;
+}
+
 .katex-host.block {
   overflow-x: auto;
   max-width: 100%;
