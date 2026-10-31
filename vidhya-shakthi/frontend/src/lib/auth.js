@@ -5,14 +5,20 @@ const STORAGE_KEY = 'vidhya_auth';
 const OFFLINE_USERS = {
   admin: { password: 'admin123', role: 'ADMIN', full_name: 'School Admin', full_name_ta: 'நிர்வாகி' },
   teacher: { password: 'teacher123', role: 'TEACHER', full_name: 'Ravi Kumar (Teacher)', full_name_ta: 'ஆசிரியர் ரவி' },
+  meena: { password: 'meena123', role: 'TEACHER', full_name: 'Meena Rani (Teacher)', full_name_ta: 'ஆசிரியர் மீனா' },
   student: { password: 'student123', role: 'STUDENT', full_name: 'Suresh Kumar (Std 10-A)', full_name_ta: 'மாணவர் சுரேஷ்' },
+  priya: { password: 'priya123', role: 'STUDENT', full_name: 'Priya Sharma (Std 10-A)', full_name_ta: 'பிரியா' },
+  karthik: { password: 'karthik123', role: 'STUDENT', full_name: 'Karthik Prakash (Std 10-A)', full_name_ta: 'கார்த்திக்' },
   parent: { password: 'parent123', role: 'PARENT', full_name: 'Kavya (Parent)', full_name_ta: 'பெற்றோர் திவ்யா' },
 };
 
 export const DEMO_CREDENTIALS = [
   { username: 'admin', password: 'admin123', role: 'ADMIN', labelEn: 'Admin', labelTa: 'நிர்வாகி' },
-  { username: 'teacher', password: 'teacher123', role: 'TEACHER', labelEn: 'Teacher', labelTa: 'ஆசிரியர்' },
-  { username: 'student', password: 'student123', role: 'STUDENT', labelEn: 'Student', labelTa: 'மாணவர்' },
+  { username: 'teacher', password: 'teacher123', role: 'TEACHER', labelEn: 'Teacher (Ravi · Maths/Science)', labelTa: 'ஆசிரியர் ரவி' },
+  { username: 'meena', password: 'meena123', role: 'TEACHER', labelEn: 'Teacher (Meena · Tamil/English)', labelTa: 'ஆசிரியர் மீனா' },
+  { username: 'student', password: 'student123', role: 'STUDENT', labelEn: 'Student (Suresh)', labelTa: 'மாணவர் சுரேஷ்' },
+  { username: 'priya', password: 'priya123', role: 'STUDENT', labelEn: 'Student (Priya)', labelTa: 'மாணவர் பிரியா' },
+  { username: 'karthik', password: 'karthik123', role: 'STUDENT', labelEn: 'Student (Karthik)', labelTa: 'மாணவர் கார்த்திக்' },
   { username: 'parent', password: 'parent123', role: 'PARENT', labelEn: 'Parent', labelTa: 'பெற்றோர்' },
 ];
 
@@ -59,11 +65,11 @@ export function getHomePathForRole(role) {
   if (!r) return '/login';
   switch (r) {
     case 'STUDENT':
-      return '/learn';
+      return '/student';
     case 'PARENT':
       return '/parent';
     case 'TEACHER':
-      return '/dashboard/learn-cms';
+      return '/dashboard';
     case 'ADMIN':
     default:
       return '/dashboard';
@@ -110,6 +116,7 @@ export async function login(username, password) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
+      signal: AbortSignal.timeout(2500),
     });
     if (!res.ok) {
       const offline = offlineLogin(username, password);

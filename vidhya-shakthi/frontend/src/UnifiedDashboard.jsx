@@ -8,6 +8,10 @@ import {
   MessageCircle, ChevronRight, Loader2, Phone, FileCode, LogOut,
 } from 'lucide-react';
 import LearnContentCMS from './components/LearnContentCMS';
+import ClassAssignTab from './features/school/ClassAssignTab.jsx';
+import ExamBuilderTab from './features/school/ExamBuilderTab.jsx';
+import { categorize, formatDuration, formatLastActive } from './features/learning/utils/learnAnalyticsStore.js';
+import { getStudentsForTeacher } from './features/learning/utils/schoolOsStore.js';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, RadialBarChart, RadialBar,
@@ -28,9 +32,11 @@ const TABS = [
   { id: 'learn-cms', label: 'Upload Learn Tutorials', icon: Upload, roles: ['ADMIN', 'TEACHER'] },
   { id: 'attendance', label: 'Attendance & Alerts', icon: ClipboardCheck, roles: ['ADMIN', 'TEACHER'] },
   { id: 'homework', label: 'Smart Homework', icon: BookOpen, roles: ['ADMIN', 'TEACHER'] },
+  { id: 'class', label: 'Class & Access', icon: Users, roles: ['ADMIN', 'TEACHER'] },
   { id: 'analytics', label: 'Student Analytics', icon: BarChart3, roles: ['ADMIN', 'TEACHER'] },
+  { id: 'exams', label: 'Create Exam', icon: FileQuestion, roles: ['ADMIN', 'TEACHER'] },
   { id: 'tutor', label: 'AI Tamil Tutor', icon: Bot, roles: ['ADMIN', 'TEACHER'] },
-  { id: 'questions', label: 'Questions & Timetable', icon: FileQuestion, roles: ['ADMIN', 'TEACHER'] },
+  { id: 'questions', label: 'Questions & Timetable', icon: Calendar, roles: ['ADMIN', 'TEACHER'] },
 ];
 
 function tabsForRole(role) {
@@ -40,7 +46,7 @@ function tabsForRole(role) {
 
 function defaultTabForRole(role, initialTab) {
   if (initialTab && TABS.some((t) => t.id === initialTab)) return initialTab;
-  return role === 'TEACHER' ? 'learn-cms' : 'admin';
+  return role === 'TEACHER' ? 'analytics' : 'admin';
 }
 
 const CATEGORY_STYLES = {
@@ -494,67 +500,124 @@ function HomeworkTab() {
   );
 }
 
+function decorateRow(row) {
+  const weak = row.weak?.join(', ') || '—';
+  const category = categorize(row.pct);
+  const action =
+    category === 'SLOW_LEARNER'
+      ? 'Assign foundational cards'
+      : category === 'AVERAGE'
+        ? 'Practice remaining units'
+        : 'Give HOTS / extra problems';
+  return { ...row, weak, category, action };
+}
+
 function AnalyticsTab() {
-  const [grade, setGrade] = useState('10');
-  const [subject, setSubject] = useState('Math');
+  const { user } = useAuth();
+  const [tick, setTick] = useState(0);
+  const [rows, setRows] = useState(null);
+
+  useEffect(() => {
+    let live = true;
+    import('./features/learning/utils/learnAnalytics.js').then((mod) => {
+      if (!live) return;
+      const mine = user?.role === 'TEACHER' ? new Set(getStudentsForTeacher(user.username)) : null;
+      setRows(
+        mod.getClassAnalytics()
+          .filter((row) => !mine || mine.has(row.username))
+          .map(decorateRow),
+      );
+    });
+    return () => {
+      live = false;
+    };
+  }, [tick, user]);
+
+  const classSeconds = (rows || []).reduce((n, r) => n + r.secondsTotal, 0);
+  const classPct = rows?.length ? Math.round(rows.reduce((n, r) => n + r.pct, 0) / rows.length) : 0;
+  const subjects = rows?.[0]?.bySubject || [];
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Student Categorization Analytics</h2>
-          <p className="text-gray-500 text-sm">AI-driven performance categories with remedial actions</p>
+          <h2 className="text-2xl font-bold text-gray-900">Class learning analytics</h2>
+          <p className="text-gray-500 text-sm">Time spent and syllabus coverage from student Learn Hub logins</p>
         </div>
-        <div className="flex gap-3">
-          <select value={grade} onChange={(e) => setGrade(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm">
-            {['8', '9', '10', '11', '12'].map((g) => <option key={g} value={g}>Grade {g}</option>)}
-          </select>
-          <select value={subject} onChange={(e) => setSubject(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm">
-            {['Math', 'Science', 'Tamil', 'English'].map((s) => <option key={s}>{s}</option>)}
-          </select>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setRows(null);
+            setTick((n) => n + 1);
+          }}
+          className="text-sm font-semibold px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50"
+        >
+          Refresh
+        </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      {!rows && (
+        <p className="text-sm text-gray-500 bg-white border border-gray-100 rounded-2xl p-4">
+          Loading live coverage from Learn Hub units…
+        </p>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="rounded-2xl p-4 bg-white border border-gray-100">
+          <p className="text-2xl font-extrabold text-indigo-700">{rows?.length ?? '…'}</p>
+          <p className="text-sm text-gray-500">Students</p>
+        </div>
+        <div className="rounded-2xl p-4 bg-white border border-gray-100">
+          <p className="text-2xl font-extrabold text-emerald-700">{rows ? `${classPct}%` : '…'}</p>
+          <p className="text-sm text-gray-500">Avg coverage</p>
+        </div>
+        <div className="rounded-2xl p-4 bg-white border border-gray-100">
+          <p className="text-2xl font-extrabold text-sky-700">{rows ? formatDuration(classSeconds) : '…'}</p>
+          <p className="text-sm text-gray-500">Class study time</p>
+        </div>
         {Object.entries(CATEGORY_STYLES).map(([key, style]) => {
-          const count = ANALYTICS_DATA.filter((d) => d.category === key).length;
+          const count = (rows || []).filter((d) => d.category === key).length;
           return (
-            <div key={key} className={`rounded-2xl p-4 ${style.bg} border border-white/50`}>
-              <p className={`text-2xl font-extrabold ${style.text}`}>{count}</p>
+            <div key={key} className={`rounded-2xl p-4 ${style.bg}`}>
+              <p className={`text-2xl font-extrabold ${style.text}`}>{rows ? count : '…'}</p>
               <p className={`text-sm font-semibold ${style.text}`}>{style.label}s</p>
             </div>
           );
         })}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+        <table className="w-full text-sm min-w-[720px]">
           <thead className="bg-gray-50 border-b">
             <tr>
-              {['Student', 'Quarterly Marks', 'Category', 'Weak Topics', 'AI Remedial Action'].map((h) => (
+              {['Student', 'Coverage', 'Time spent', 'Last active', 'Weak subjects', 'Action'].map((h) => (
                 <th key={h} className="text-left px-4 py-3 font-semibold text-gray-600">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {ANALYTICS_DATA.map((row, i) => {
+            {(rows || []).map((row) => {
               const cat = CATEGORY_STYLES[row.category];
               return (
-                <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50">
-                  <td className="px-4 py-3 font-medium text-gray-800">{row.name}</td>
+                <tr key={row.username} className="border-b border-gray-50 hover:bg-gray-50/50">
                   <td className="px-4 py-3">
-                    <span className={`font-bold ${row.marks >= 80 ? 'text-emerald-600' : row.marks < 45 ? 'text-orange-600' : 'text-amber-600'}`}>
-                      {row.marks}%
-                    </span>
+                    <p className="font-medium text-gray-800">{row.full_name}</p>
+                    <p className="text-[11px] text-gray-400">{row.done}/{row.total} questions</p>
                   </td>
+                  <td className="px-4 py-3">
+                    <span className={`font-bold ${row.pct >= 70 ? 'text-emerald-600' : row.pct < 35 ? 'text-orange-600' : 'text-amber-600'}`}>
+                      {row.pct}%
+                    </span>
+                    <div className="mt-1 h-1.5 w-24 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-indigo-500" style={{ width: `${row.pct}%` }} />
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 font-medium text-gray-700">{formatDuration(row.secondsTotal)}</td>
+                  <td className="px-4 py-3 text-gray-500">{formatLastActive(row.lastActive)}</td>
+                  <td className="px-4 py-3 text-gray-500">{row.weak}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded-lg text-xs font-bold ${cat.bg} ${cat.text}`}>{cat.label}</span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">{row.weakTopics}</td>
-                  <td className="px-4 py-3">
-                    <button className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg font-semibold hover:bg-indigo-100">
-                      [ {row.action} ]
-                    </button>
+                    <p className="text-[11px] text-indigo-700 mt-1">{row.action}</p>
                   </td>
                 </tr>
               );
@@ -562,6 +625,65 @@ function AnalyticsTab() {
           </tbody>
         </table>
       </div>
+
+      {subjects.length > 0 && (
+        <div>
+          <h3 className="text-lg font-bold text-gray-900 mb-3">Subject-wise class coverage</h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            {subjects.map((sub) => {
+              const avg = Math.round(
+                rows.reduce((n, r) => n + (r.bySubject.find((s) => s.subject.id === sub.subject.id)?.pct || 0), 0) /
+                  rows.length,
+              );
+              const seconds = rows.reduce(
+                (n, r) => n + (r.bySubject.find((s) => s.subject.id === sub.subject.id)?.seconds || 0),
+                0,
+              );
+              return (
+                <div key={sub.subject.id} className="bg-white rounded-2xl border border-gray-100 p-4">
+                  <div className="flex justify-between items-baseline">
+                    <p className="font-bold text-gray-800">{sub.subject.name}</p>
+                    <p className="text-sm font-extrabold text-indigo-700">{avg}%</p>
+                  </div>
+                  <div className="mt-2 h-2 rounded-full bg-gray-100 overflow-hidden">
+                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${avg}%` }} />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">Class time {formatDuration(seconds)}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {rows?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+          <table className="w-full text-sm min-w-[640px]">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Student / subject</th>
+                {subjects.map((sub) => (
+                  <th key={sub.subject.id} className="text-left px-4 py-3 font-semibold text-gray-600">
+                    {sub.subject.name}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={`break-${row.username}`} className="border-b border-gray-50">
+                  <td className="px-4 py-3 font-medium text-gray-800">{row.full_name.split('(')[0].trim()}</td>
+                  {row.bySubject.map((sub) => (
+                    <td key={sub.subject.id} className="px-4 py-3 text-gray-600">
+                      {sub.pct}% · {formatDuration(sub.seconds)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -923,9 +1045,11 @@ export default function UnifiedDashboard({ initialTab }) {
     switch (activeTab) {
       case 'admin': return <AdminTab onOpenLearnCms={() => selectTab('learn-cms')} />;
       case 'learn-cms': return <LearnContentCMS />;
+      case 'class': return <ClassAssignTab />;
       case 'attendance': return <AttendanceTab />;
       case 'homework': return <HomeworkTab />;
       case 'analytics': return <AnalyticsTab />;
+      case 'exams': return <ExamBuilderTab />;
       case 'tutor': return <TutorTab />;
       case 'questions': return <QuestionsTab />;
       default: return <AdminTab />;

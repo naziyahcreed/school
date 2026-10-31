@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
 import UnifiedDashboard from './UnifiedDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -6,6 +6,9 @@ import StudentDashboard from './pages/StudentDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ParentDashboard from './pages/ParentDashboard';
 import StudentLearning from './pages/StudentLearning';
+import LearnProgressPage from './features/learning/pages/LearnProgressPage.jsx';
+import LearnProfilePage from './features/learning/pages/LearnProfilePage.jsx';
+import StudentHomePage from './features/learning/pages/StudentHomePage.jsx';
 import Login from './pages/Login';
 import RequireAuth from './components/RequireAuth';
 import GuideHome from './pages/guides/GuideHome';
@@ -16,6 +19,21 @@ import Exercise1_1 from './pages/guides/maths/unit-1/Exercise1_1';
 import Exercise1_1New from './pages/guides/maths/unit-1/Exercise1_1New';
 import { AuthProvider } from './context/AuthContext';
 import { getHomePathForRole, readStoredAuth } from './lib/auth';
+
+const LearnHomePage = lazy(() => import('./features/learning/pages/LearnHomePage.jsx'));
+const LearnSubjectPage = lazy(() => import('./features/learning/pages/LearnSubjectPage.jsx'));
+const LearnUnitPage = lazy(() => import('./features/learning/pages/LearnUnitPage.jsx'));
+const LearnQuestionPage = lazy(() => import('./features/learning/pages/LearnQuestionPage.jsx'));
+const LearnExercisePage = lazy(() => import('./features/learning/pages/LearnExercisePage.jsx'));
+const LearnExamPage = lazy(() => import('./features/learning/pages/LearnExamPage.jsx'));
+
+function LearnFallback() {
+  return (
+    <div className="px-5 pt-16 text-center text-sm text-slate-500">
+      Loading 10th Study Hub units…
+    </div>
+  );
+}
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -86,13 +104,72 @@ function App() {
               }
             />
             <Route
-              path="/learn"
               element={
                 <RequireAuth roles={['ADMIN', 'TEACHER', 'STUDENT']}>
                   <StudentLearning />
                 </RequireAuth>
               }
-            />
+            >
+              <Route path="/student" element={<StudentHomePage />} />
+              <Route
+                path="/learn"
+                element={
+                  <Suspense fallback={<LearnFallback />}>
+                    <LearnHomePage />
+                  </Suspense>
+                }
+              />
+              <Route path="/learn/progress" element={<LearnProgressPage />} />
+              <Route path="/learn/profile" element={<LearnProfilePage />} />
+              <Route
+                path="/learn/exam/:examId"
+                element={
+                  <Suspense fallback={<LearnFallback />}>
+                    <LearnExamPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/learn/:subjectId"
+                element={
+                  <Suspense fallback={<LearnFallback />}>
+                    <LearnSubjectPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/learn/:subjectId/:chapterId"
+                element={
+                  <Suspense fallback={<LearnFallback />}>
+                    <LearnUnitPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/learn/:subjectId/:chapterId/ex/:exerciseId"
+                element={
+                  <Suspense fallback={<LearnFallback />}>
+                    <LearnExercisePage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/learn/:subjectId/:chapterId/ex/:exerciseId/q/:questionId"
+                element={
+                  <Suspense fallback={<LearnFallback />}>
+                    <LearnQuestionPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/learn/:subjectId/:chapterId/q/:questionId"
+                element={
+                  <Suspense fallback={<LearnFallback />}>
+                    <LearnQuestionPage />
+                  </Suspense>
+                }
+              />
+            </Route>
             <Route
               path="/parent"
               element={

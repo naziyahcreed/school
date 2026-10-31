@@ -3,5 +3,15 @@
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900;
+    font-family: 'Plus Jakarta Sans', 'Noto Sans Tamil', ui-sans-serif, system-ui, sans-serif;
   }
+}
+
+.katex-host .katex {
+  font-size: 1.05em;
+}
+
+.katex-host.block {
+  overflow-x: auto;
+  max-width: 100%;
 }

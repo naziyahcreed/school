@@ -30,11 +30,32 @@ DEMO_USERS: list[dict] = [
         'full_name_ta': 'ஆசிரியர் ரவி',
     },
     {
+        'username': 'meena',
+        'password_hash': _hash_password('meena123'),
+        'role': 'TEACHER',
+        'full_name': 'Meena Rani (Teacher)',
+        'full_name_ta': 'ஆசிரியர் மீனா',
+    },
+    {
         'username': 'student',
         'password_hash': _hash_password('student123'),
         'role': 'STUDENT',
         'full_name': 'Suresh Kumar (Std 10-A)',
         'full_name_ta': 'மாணவர் சுரேஷ்',
+    },
+    {
+        'username': 'priya',
+        'password_hash': _hash_password('priya123'),
+        'role': 'STUDENT',
+        'full_name': 'Priya Sharma (Std 10-A)',
+        'full_name_ta': 'பிரியா',
+    },
+    {
+        'username': 'karthik',
+        'password_hash': _hash_password('karthik123'),
+        'role': 'STUDENT',
+        'full_name': 'Karthik Prakash (Std 10-A)',
+        'full_name_ta': 'கார்த்திக்',
     },
     {
         'username': 'parent',

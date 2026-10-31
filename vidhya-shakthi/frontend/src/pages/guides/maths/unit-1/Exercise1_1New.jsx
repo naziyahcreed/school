@@ -1,7 +1,8 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, PenTool } from 'lucide-react';
-import { unit1Perfect } from '../../../data/unit1_perfect';
+import { unit1Perfect } from '../../../../data/unit1_perfect';
+import LatexText from '../../../../features/learning/components/LatexText.jsx';
 
 const Exercise1_1New = () => {
   const navigate = useNavigate();
@@ -49,10 +50,8 @@ const Exercise1_1New = () => {
                   
                   {/* LaTeX Statement block */}
                   {problem.statementLatex && (
-                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6">
-                      <pre className="text-blue-900 font-medium font-mono text-base whitespace-pre-wrap leading-loose">
-                        {problem.statementLatex}
-                      </pre>
+                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6 overflow-x-auto">
+                      <LatexText text={problem.statementLatex} />
                     </div>
                   )}
                 </div>
@@ -68,10 +67,8 @@ const Exercise1_1New = () => {
                 {problem.guidedSteps.map((step) => (
                   <div key={step.stepIndex} className="space-y-3">
                     <p className="font-semibold text-gray-700 text-base">{step.prompt}</p>
-                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-inner">
-                      <pre className="text-gray-800 font-mono text-base whitespace-pre-wrap leading-relaxed">
-                        {step.latexIntermediate}
-                      </pre>
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-inner overflow-x-auto">
+                      <LatexText text={step.latexIntermediate} forceMath />
                     </div>
                   </div>
                 ))}

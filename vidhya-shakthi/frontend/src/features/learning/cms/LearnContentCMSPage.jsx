@@ -134,7 +134,7 @@ export default function LearnContentCMSPage() {
     author_name: authorName,
   };
 
-  const learnPreviewUrl = `/learn?subject=${form.subjectId}&unit=${form.chapterId}`;
+  const learnPreviewUrl = `/learn/${form.subjectId}/${form.chapterId}`;
 
   return (
     <div className="space-y-6">

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Lightbulb, AlertCircle, CheckCircle2, HelpCircle } from 'lucide-react';
+import LatexText from '../features/learning/components/LatexText.jsx';
 
 /**
  * One textbook concept — full slow-learner tutorial block.
@@ -62,8 +63,8 @@ export default function ConceptTutorial({ concept, colors, medium = 'en' }) {
         )}
 
         {concept.formula && (
-          <div className={`p-4 rounded-xl font-mono text-sm ${colors.light} ${colors.text} border ${colors.border}`}>
-            {concept.formula}
+          <div className={`p-4 rounded-xl text-sm ${colors.light} ${colors.text} border ${colors.border} overflow-x-auto`}>
+            <LatexText text={concept.formula} forceMath />
           </div>
         )}
 
@@ -76,9 +77,9 @@ export default function ConceptTutorial({ concept, colors, medium = 'en' }) {
             {concept.example.think && (
               <p className="text-slate-400 text-xs italic mb-3">Think: {concept.example.think}</p>
             )}
-            <pre className="text-sm whitespace-pre-wrap font-mono bg-slate-800/60 p-4 rounded-lg">
-              {concept.example.solution}
-            </pre>
+            <div className="text-sm bg-slate-800/60 p-4 rounded-lg overflow-x-auto text-slate-100">
+              <LatexText text={concept.example.solution} />
+            </div>
           </div>
         )}
 
