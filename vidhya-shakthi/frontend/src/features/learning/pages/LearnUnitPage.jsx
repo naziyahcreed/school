@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Lightbulb } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Lightbulb, CheckCircle2, BookmarkCheck, FileCheck2 } from 'lucide-react';
 import { LMS_SUBJECTS } from '../catalog/lmsCatalog.js';
 import { displayUnitTitle, getTheme } from '../theme.js';
 import {
